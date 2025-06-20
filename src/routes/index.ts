@@ -948,4 +948,11 @@ routes.get('/unhealthy', HealthCheck.unhealthy);
 
 routes.get('/metrics', prometheusRegister.metrics);
 
+// CORREÇÃO: Usar "SessionController" (maiúsculo) e adicionar o prefixo "/api/"
+routes.post(
+  '/api/:session/clear-session',
+  verifyToken,
+  SessionController.clearSession
+);
+
 export default routes;

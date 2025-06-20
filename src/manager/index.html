@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel WPPConnect</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Painel WPPConnect</h1>
+    </header>
+
+    <main class="main-content">
+      <div class="sessions-container" id="lista-sessoes"></div>
+      <p id="loading-message">Carregando sessões...</p>
+    </main>
+
+    <button class="fab" onclick="openCreateSessionModal()">
+      <i class="fa fa-plus"></i>
+    </button>
+
+    <div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
+      <div
+        id="modal-content"
+        class="modal-content"
+        onclick="event.stopPropagation()"
+      >
+        <div class="modal-header">
+          <h2 id="modal-title">Modal Title</h2>
+          <button class="modal-close-btn" onclick="closeModal()">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

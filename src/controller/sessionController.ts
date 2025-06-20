@@ -787,3 +787,57 @@ export async function editBusinessProfile(req: Request, res: Response) {
     });
   }
 }
+
+// Adicione esta função completa no final do arquivo sessionController.ts
+
+export async function clearSession(req: Request, res: Response) {
+  /**
+   * #swagger.tags = ["Auth"]
+   * #swagger.operationId = 'clearSession'
+   * #swagger.summary = 'Clear session data (tokens and user data)'
+   * #swagger.autoBody=false
+   * #swagger.security = [{
+            "bearerAuth": []
+     }]
+   * #swagger.parameters["session"] = {
+      schema: 'NERDWHATS_AMERICA'
+     }
+   */
+  const { session } = req.params;
+  try {
+    // Remove a sessão do array em memória, se existir
+    deleteSessionOnArray(session);
+
+    // Define os caminhos para os arquivos da sessão
+    const pathUserData = config.customUserDataDir + session;
+    const pathTokens = __dirname + `../../../tokens/${session}.data.json`;
+
+    // Apaga a pasta de dados do usuário
+    if (fs.existsSync(pathUserData)) {
+      await fs.promises.rm(pathUserData, {
+        recursive: true,
+        force: true,
+      });
+    }
+
+    // Apaga o arquivo de token
+    if (fs.existsSync(pathTokens)) {
+      await fs.promises.rm(pathTokens, {
+        recursive: true,
+        force: true,
+      });
+    }
+
+    console.log(`Dados da sessão ${session} limpos do disco.`);
+    return res
+      .status(200)
+      .json({ status: true, message: 'Dados da sessão limpos com sucesso.' });
+  } catch (error) {
+    req.logger.error(error);
+    return res.status(500).json({
+      status: false,
+      message: 'Erro ao limpar dados da sessão',
+      error,
+    });
+  }
+}
