@@ -1,5 +1,5 @@
-const API_URL = 'http://localhost:21465';
-const SECRET_KEY = 'minhasenha';
+const API_URL = 'https://wpp.moratosolucoes.com.br';
+const SECRET_KEY = 'Xg7#R9vEwqZ@F6u2L!hPzT^mKcBnA3sY';
 
 let activeSessionInterval = null;
 let countdownInterval = null;

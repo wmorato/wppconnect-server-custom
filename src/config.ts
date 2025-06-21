@@ -1,9 +1,9 @@
 import { ServerOptions } from './types/ServerOptions';
 
 export default {
-  secretKey: 'minhasenha',
+  secretKey: 'Xg7#R9vEwqZ@F6u2L!hPzT^mKcBnA3sY',
   host: 'http://localhost',
-  port: '21465',
+  port: '5300',
   deviceName: 'WppConnect',
   poweredBy: 'WPPConnect-Server',
   startAllSession: true,
