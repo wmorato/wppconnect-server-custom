@@ -50,6 +50,7 @@ export function initServer(serverOptions: Partial<ServerOptions>): {
   }
 
   serverOptions = mergeDeep({}, config, serverOptions);
+  console.log('Valor final de serverOptions após merge:', serverOptions); // Adicione esta linha
   defaultLogger.level = serverOptions?.log?.level
     ? serverOptions.log.level
     : 'silly';
