@@ -1,18 +1,4 @@
-/*
- * Copyright 2021 WPPConnect Team
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// src/index.ts
 
 import { defaultLogger } from '@wppconnect-team/wppconnect';
 import cors from 'cors';
@@ -25,7 +11,7 @@ import { Server as Socket } from 'socket.io';
 import { Logger } from 'winston';
 
 import { version } from '../package.json';
-import config from './config';
+import config from './config'; // Certifique-se que o caminho para config.ts está correto
 import { convert } from './mapper/index';
 import routes from './routes';
 import { ServerOptions } from './types/ServerOptions';
@@ -34,31 +20,45 @@ import {
   setMaxListners,
   startAllSessions,
 } from './util/functions';
-import { createLogger } from './util/logger';
+import { createLogger } from './util/logger'; // Adicione esta linha
 
-//require('dotenv').config();
+// require('dotenv').config(); // Descomente se você usa variáveis de ambiente via .env
 
 export const logger = createLogger(config.log);
 
-export function initServer(serverOptions: Partial<ServerOptions>): {
+console.log('--- Início de initServer ---');
+console.log('config importado no escopo global:', config); // Verifique o conteúdo de 'config'
+
+export function initServer(serverOptionsParam: Partial<ServerOptions>): {
   app: Express;
   routes: Router;
   logger: Logger;
 } {
-  if (typeof serverOptions !== 'object') {
-    serverOptions = {};
-  }
+  console.log('initServer chamado com serverOptionsParam:', serverOptionsParam);
 
-  serverOptions = mergeDeep({}, config, serverOptions);
-  console.log('Valor final de serverOptions após merge:', serverOptions); // Adicione esta linha
+  // Inicializa serverOptions combinando o config padrão com os parâmetros passados.
+  // O 'as ServerOptions' é necessário porque 'mergeDeep' retorna um Partial,
+  // mas esperamos um ServerOptions completo neste contexto.
+  const serverOptions: ServerOptions = mergeDeep(
+    {},
+    config,
+    serverOptionsParam
+  ) as ServerOptions;
+
+  console.log('serverOptions após mergeDeep:', serverOptions);
+  console.log(
+    'secretKey no serverOptions (DEVE SER DEFINIDO):',
+    serverOptions.secretKey
+  ); // Verifique se o secretKey está aqui
+
   defaultLogger.level = serverOptions?.log?.level
     ? serverOptions.log.level
     : 'silly';
 
-  setMaxListners(serverOptions as ServerOptions);
+  setMaxListners(serverOptions); // Remove o 'as ServerOptions' se não for mais necessário
 
   const app = express();
-  const PORT = process.env.PORT || serverOptions.port;
+  const PORT = process.env.PORT || serverOptions.port; // Certifique-se que serverOptions.port está definido
 
   app.use(
     cors({
@@ -71,14 +71,14 @@ export function initServer(serverOptions: Partial<ServerOptions>): {
   app.use('/files', express.static('WhatsAppImages'));
   app.use(boolParser());
 
+  // Verifique se config e suas propriedades existem antes de acessar
   if (config?.aws_s3?.access_key_id && config?.aws_s3?.secret_key) {
     process.env['AWS_ACCESS_KEY_ID'] = config.aws_s3.access_key_id;
     process.env['AWS_SECRET_ACCESS_KEY'] = config.aws_s3.secret_key;
   }
 
-  // Add request options
   app.use((req: any, res: any, next: NextFunction) => {
-    req.serverOptions = serverOptions;
+    req.serverOptions = serverOptions; // <--- Esta é a linha que injeta o objeto completo
     req.logger = logger;
     req.io = io as any;
 
@@ -89,7 +89,8 @@ export function initServer(serverOptions: Partial<ServerOptions>): {
       if (content == 'application/json') {
         data = JSON.parse(data);
         if (!data.session) data.session = req.client ? req.client.session : '';
-        if (data.mapper && req.serverOptions.mapper.enable) {
+        // Cuidado com 'req.serverOptions.mapper.enable' se 'mapper' ou 'enable' puderem ser undefined
+        if (data.mapper && req.serverOptions?.mapper?.enable) {
           data.response = await convert(
             req.serverOptions.mapper.prefix,
             data.response,
@@ -116,7 +117,6 @@ export function initServer(serverOptions: Partial<ServerOptions>): {
 
   io.on('connection', (sock) => {
     logger.info(`ID: ${sock.id} entrou`);
-
     sock.on('disconnect', () => {
       logger.info(`ID: ${sock.id} saiu`);
     });
@@ -129,21 +129,27 @@ export function initServer(serverOptions: Partial<ServerOptions>): {
     );
     logger.info(`WPPConnect-Server version: ${version}`);
 
-    if (serverOptions.startAllSession) startAllSessions(serverOptions, logger);
+    if (serverOptions.startAllSession) startAllSessions(serverOptions, logger); // Verifique a assinatura de startAllSessions em util/functions
   });
 
   if (config.log.level === 'error' || config.log.level === 'warn') {
     console.log(`\x1b[33m ======================================================
 Attention:
-Your configuration is configured to show only a few logs, before opening an issue, 
+Your configuration is configured to show only a few logs, before opening an issue,
 please set the log to 'silly', copy the log that shows the error and open your issue.
 ======================================================
 `);
   }
-
+  console.log('--- Fim de initServer ---');
   return {
     app,
     routes,
     logger,
   };
+}
+
+// Chame initServer se este for o arquivo principal que o PM2 executa.
+// Se você está usando 'dist/index.js' como ponto de entrada do PM2, esta linha é essencial.
+if (require.main === module) {
+  initServer({}); // Passa um objeto vazio para que as configurações padrão do config.ts sejam usadas no mergeDeep
 }
