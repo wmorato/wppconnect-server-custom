@@ -11,7 +11,7 @@ import { Server as Socket } from 'socket.io';
 import { Logger } from 'winston';
 
 import { version } from '../package.json';
-import config from './config'; // Certifique-se que o caminho para config.ts está correto
+import config from './config';
 import { convert } from './mapper/index';
 import routes from './routes';
 import { ServerOptions } from './types/ServerOptions';
@@ -20,14 +20,14 @@ import {
   setMaxListners,
   startAllSessions,
 } from './util/functions';
-import { createLogger } from './util/logger'; // Adicione esta linha
+import { createLogger } from './util/logger';
 
 // require('dotenv').config(); // Descomente se você usa variáveis de ambiente via .env
 
 export const logger = createLogger(config.log);
 
 console.log('--- Início de initServer ---');
-console.log('config importado no escopo global:', config); // Verifique o conteúdo de 'config'
+console.log('config importado no escopo global:', config);
 
 export function initServer(serverOptionsParam: Partial<ServerOptions>): {
   app: Express;
@@ -36,9 +36,6 @@ export function initServer(serverOptionsParam: Partial<ServerOptions>): {
 } {
   console.log('initServer chamado com serverOptionsParam:', serverOptionsParam);
 
-  // Inicializa serverOptions combinando o config padrão com os parâmetros passados.
-  // O 'as ServerOptions' é necessário porque 'mergeDeep' retorna um Partial,
-  // mas esperamos um ServerOptions completo neste contexto.
   const serverOptions: ServerOptions = mergeDeep(
     {},
     config,
@@ -49,16 +46,16 @@ export function initServer(serverOptionsParam: Partial<ServerOptions>): {
   console.log(
     'secretKey no serverOptions (DEVE SER DEFINIDO):',
     serverOptions.secretKey
-  ); // Verifique se o secretKey está aqui
+  );
 
   defaultLogger.level = serverOptions?.log?.level
     ? serverOptions.log.level
     : 'silly';
 
-  setMaxListners(serverOptions); // Remove o 'as ServerOptions' se não for mais necessário
+  setMaxListners(serverOptions);
 
   const app = express();
-  const PORT = process.env.PORT || serverOptions.port; // Certifique-se que serverOptions.port está definido
+  const PORT = process.env.PORT || serverOptions.port;
 
   app.use(
     cors({
@@ -71,16 +68,19 @@ export function initServer(serverOptionsParam: Partial<ServerOptions>): {
   app.use('/files', express.static('WhatsAppImages'));
   app.use(boolParser());
 
-  // Verifique se config e suas propriedades existem antes de acessar
   if (config?.aws_s3?.access_key_id && config?.aws_s3?.secret_key) {
     process.env['AWS_ACCESS_KEY_ID'] = config.aws_s3.access_key_id;
     process.env['AWS_SECRET_ACCESS_KEY'] = config.aws_s3.secret_key;
   }
 
+  // A instância do `io` precisa ser definida antes de ser usada no middleware.
+  // Por isso, declare `io` no escopo mais externo e inicialize-a aqui.
+  let ioInstance: Socket; // Declare `ioInstance` aqui
+
   app.use((req: any, res: any, next: NextFunction) => {
-    req.serverOptions = serverOptions; // <--- Esta é a linha que injeta o objeto completo
+    req.serverOptions = serverOptions;
     req.logger = logger;
-    req.io = io as any;
+    req.io = ioInstance; // Use a instância declarada
 
     const oldSend = res.send;
 
@@ -89,7 +89,6 @@ export function initServer(serverOptionsParam: Partial<ServerOptions>): {
       if (content == 'application/json') {
         data = JSON.parse(data);
         if (!data.session) data.session = req.client ? req.client.session : '';
-        // Cuidado com 'req.serverOptions.mapper.enable' se 'mapper' ou 'enable' puderem ser undefined
         if (data.mapper && req.serverOptions?.mapper?.enable) {
           data.response = await convert(
             req.serverOptions.mapper.prefix,
@@ -109,13 +108,18 @@ export function initServer(serverOptionsParam: Partial<ServerOptions>): {
 
   createFolders();
   const http = createServer(app);
-  const io = new Socket(http, {
+
+  // Inicialize a instância do Socket.IO aqui
+  ioInstance = new Socket(http, {
     cors: {
-      origin: '*',
+      // CORREÇÃO: Altere '*' para o domínio específico do seu painel
+      origin: 'https://painel.moratosolucoes.com.br',
+      credentials: true,
     },
   });
 
-  io.on('connection', (sock) => {
+  ioInstance.on('connection', (sock) => {
+    // Use ioInstance aqui
     logger.info(`ID: ${sock.id} entrou`);
     sock.on('disconnect', () => {
       logger.info(`ID: ${sock.id} saiu`);
@@ -129,7 +133,7 @@ export function initServer(serverOptionsParam: Partial<ServerOptions>): {
     );
     logger.info(`WPPConnect-Server version: ${version}`);
 
-    if (serverOptions.startAllSession) startAllSessions(serverOptions, logger); // Verifique a assinatura de startAllSessions em util/functions
+    if (serverOptions.startAllSession) startAllSessions(serverOptions, logger);
   });
 
   if (config.log.level === 'error' || config.log.level === 'warn') {
@@ -149,7 +153,6 @@ please set the log to 'silly', copy the log that shows the error and open your i
 }
 
 // Chame initServer se este for o arquivo principal que o PM2 executa.
-// Se você está usando 'dist/index.js' como ponto de entrada do PM2, esta linha é essencial.
 if (require.main === module) {
-  initServer({}); // Passa um objeto vazio para que as configurações padrão do config.ts sejam usadas no mergeDeep
+  initServer({});
 }
