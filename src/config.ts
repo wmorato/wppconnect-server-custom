@@ -2,8 +2,8 @@ import { ServerOptions } from './types/ServerOptions';
 
 export default {
   secretKey: 'Xg7R9vEwqZ2F6u2LmKcBnA3sY',
-  host: 'https://wpp.moratosolucoes.com.br',
-  port: '443',
+  host: 'http://localhost',
+  port: '5300',
   deviceName: 'WppConnect',
   poweredBy: 'WPPConnect-Server',
   startAllSession: true,
