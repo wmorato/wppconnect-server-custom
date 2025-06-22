@@ -5,7 +5,13 @@ import routes from './routes';
 const app = express();
 const PORT = process.env.PORT || 5300;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ['https://painel.moratosolucoes.com.br'],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // ✅ Adiciona as rotas corretamente

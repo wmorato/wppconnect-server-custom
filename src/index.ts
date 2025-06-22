@@ -59,7 +59,12 @@ export function initServer(serverOptions: Partial<ServerOptions>): {
   const app = express();
   const PORT = process.env.PORT || serverOptions.port;
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin: ['https://painel.moratosolucoes.com.br'],
+      credentials: true,
+    })
+  );
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use('/files', express.static('WhatsAppImages'));
